@@ -14,10 +14,54 @@ resource "aws_subnet" "public_subnet_b" {
   availability_zone = "us-west-2b"
 }
 
+resource "aws_subnet" "private_subnet_a" {
+  vpc_id            = aws_vpc.application_vpc.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-west-2a"
+}
+
+resource "aws_subnet" "private_subnet_b" {
+  vpc_id            = aws_vpc.application_vpc.id
+  cidr_block        = "10.0.4.0/24"
+  availability_zone = "us-west-2b"
+}
+
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.application_vpc.id
 
 }
+
+resource "aws_eip" "nat_ip" {
+  vpc      = true
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_ip.id
+  subnet_id     = aws_subnet.public_subnet_a.id
+
+  tags = {
+    Name = "gw NAT"
+  }
+
+  # To ensure proper ordering, it is recommended to add an explicit dependency
+  # on the Internet Gateway for the VPC.
+  depends_on = [aws_internet_gateway.igw]
+}
+
+resource "aws_default_route_table" "private_route_table" {
+  default_route_table_id = aws_vpc.application_vpc.default_route_table_id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.nat.id
+  }
+
+
+  tags = {
+    Name = "example"
+  }
+}
+
 
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.application_vpc.id
@@ -52,16 +96,7 @@ resource "aws_security_group" "allow_http_ssh" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-
-  }
-
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    security_groups = [ aws_security_group.allow_http_lb.id ]
 
   }
 
@@ -81,9 +116,8 @@ resource "aws_security_group" "allow_http_ssh" {
 resource "aws_instance" "webserver" {
   ami                         = "ami-0d593311db5abb72b"
   instance_type               = "t2.micro"
-  key_name                    = "vockey"
   associate_public_ip_address = true
-  subnet_id                   = aws_subnet.public_subnet_a.id
+  subnet_id                   = aws_subnet.private_subnet_a.id
   security_groups             = [aws_security_group.allow_http_ssh.id]
   user_data                   = file("userdata.sh")
 }
