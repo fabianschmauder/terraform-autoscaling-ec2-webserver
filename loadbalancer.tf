@@ -5,12 +5,6 @@ resource "aws_lb_target_group" "webserver_target" {
   vpc_id   = aws_vpc.application_vpc.id
 }
 
-resource "aws_lb_target_group_attachment" "instance_a" {
-  target_group_arn = aws_lb_target_group.webserver_target.arn
-  target_id        = aws_instance.webserver.id
-  port             = 80
-}
-
 
 resource "aws_security_group" "allow_http_lb" {
   name        = "http"

@@ -112,16 +112,3 @@ resource "aws_security_group" "allow_http_ssh" {
     Name = "allow_tls"
   }
 }
-
-resource "aws_instance" "webserver" {
-  ami                         = "ami-0d593311db5abb72b"
-  instance_type               = "t2.micro"
-  associate_public_ip_address = true
-  subnet_id                   = aws_subnet.private_subnet_a.id
-  security_groups             = [aws_security_group.allow_http_ssh.id]
-  user_data                   = file("userdata.sh")
-}
-
-output "ec2_public_ip" {
-  value = aws_instance.webserver.public_ip
-}
