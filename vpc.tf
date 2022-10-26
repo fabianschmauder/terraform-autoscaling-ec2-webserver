@@ -58,7 +58,7 @@ resource "aws_default_route_table" "private_route_table" {
 
 
   tags = {
-    Name = "example"
+    Name = "Private route table"
   }
 }
 
